@@ -1,9 +1,14 @@
 #pragma once
-#include "vertex3.h"
 #include <vector>
 #include "uniforms.h"
+#include "fragment.h"
+#include "color.h"
 
-Vertex3 vertexShader(const Vertex3 vertex, const Uniforms& uniforms) {
+glm::vec3 vertexShader(const glm::vec3& vertex, const Uniforms& uniforms) {
     glm::vec4 transformedVertex = uniforms.viewport * uniforms.projection * uniforms.view * uniforms.model * glm::vec4(vertex.x, vertex.y, vertex.z, 1.0f);
-    return Vertex3(glm::vec3(transformedVertex/transformedVertex.w));
+    return glm::vec3(transformedVertex/transformedVertex.w);
+}
+
+Color fragmentShader(const Fragment& fragment) {
+    return Color(255, 255, 255);
 }

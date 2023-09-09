@@ -5,7 +5,8 @@
 #include <string>
 #include <vector>
 #include "face.h"
-#include "vertex3.h"
+#include <glm/glm.hpp>
+#include <SDL2/SDL.h>
 
 bool loadOBJ(const std::string& path, std::vector<glm::vec3>& out_vertices, std::vector<Face>& out_faces) {
     std::ifstream file(path);
