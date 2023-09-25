@@ -1,6 +1,8 @@
-# 3D Rendering Project (SR-01): Model Loading and Basic Rendering
+# 3D Rendering Project (SR-02): Flat Shading
+![image](https://github.com/TheKiesling/CG-Project-SpaceTravel/assets/84196494/e61a2fe9-50d9-4680-9a72-73d5f8f70aab)
 
-![image](https://github.com/TheKiesling/CG-Project-SpaceTravel/assets/84196494/4199083d-0d3b-4d96-8d73-d94ea9e7c30a)
+![image](https://github.com/TheKiesling/CG-Project-SpaceTravel/assets/84196494/3ae14b02-20ca-4054-978e-a130be1ee983)
+
 
 
 ## Table of Contents
@@ -13,11 +15,14 @@
 - [License](#license)
 
 ## Overview
-This project, SR-01, is the first part of a 3D rendering project aimed at developing a simple 3D renderer from scratch. In this part, we focus on loading 3D models in the OBJ format and rendering them using basic triangle rasterization.
+This project, SR-02, showcasing flat shading and Z-buffer rendering techniques. It utilizes SDL for window management and rendering.
 
 ## Prerequisites
 Before you begin, ensure you have met the following requirements:
 - **C++ Development Environment:** You should have a C++ development environment set up on your machine. You can use any C++ compiler of your choice.
+- C++ compiler
+- SDL2 library
+- glm library
 
 ## Getting Started
 To get started with this project, follow these steps:
@@ -32,13 +37,17 @@ To get started with this project, follow these steps:
 ## File Structure
 The project structure is as follows:
 - `main.cpp`: The main entry point of the program.
-- `framebuffer.h`: Contains the Framebuffer class responsible for rendering.
-- `loadOBJ.h`: Handles loading 3D models in the OBJ format.
-- `shaders.h`: Contains the vertex shader used for basic transformation.
-- `uniforms.h`: Defines the Uniforms structure for shader inputs.
-- `vertex3.h`: Defines the Vertex3 structure for 3D vertex data.
-- `face.h`: Contains the Face structure for storing face data.
+- `camera.h`: Contains the Camera structure for defining the viewpoint.
 - `color.h`: Defines the Color structure for color handling.
+- `face.h`: Contains the Face structure for storing face data.
+- `fragment.h`: Defines the Fragment structure representing a fragment in rendering.
+- `line.h`: Contains the line drawing algorithm and related functions.
+- `loadOBJ.h`: Handles loading 3D models in the OBJ format.
+- `point.h`: Contains functions for drawing points in rendering.
+- `shaders.h`: Contains the vertex and fragment shaders.
+- `triangle.h`: Contains functions for triangle rasterization.
+- `uniforms.h`: Defines the Uniforms structure for shader inputs.
+- `vertex.h`: Defines the Vertex structure for 3D vertex data.
 
 ## Contributing
 Contributions are what make the open-source community an incredible place to learn, inspire, and create. We welcome contributions from the community.
