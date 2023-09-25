@@ -4,8 +4,9 @@
 
 struct Fragment {
 
-  int x;
-  int y;
-  Color color;
+    glm::vec2 position; 
+    Color color;
+    float z;  
+    float intensity;
 
 };

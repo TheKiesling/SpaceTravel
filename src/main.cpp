@@ -11,6 +11,12 @@
 #include "point.h"
 #include "fragment.h"
 
+/**
+* ? FragColor
+* ? cambio en point
+* ? vertexBufferObject
+*/
+
 SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
 
@@ -52,44 +58,43 @@ glm::mat4 createViewportMatrix() {
     return viewport;
 }
 
-std::vector<std::vector<glm::vec3>> primitiveAssembly(const std::vector<glm::vec3>& transformedVertexArray) {
-    std::vector<std::vector<glm::vec3>> assembledVertexArray;
-    for (size_t i = 0; i < transformedVertexArray.size(); i += 3) {
-        std::vector<glm::vec3> triangle = {
-            transformedVertexArray[i],
-            transformedVertexArray[i + 1],
-            transformedVertexArray[i + 2]
-        };
+std::vector<std::vector<Vertex>> primitiveAssembly(const std::vector<Vertex>& transformedVertexArray) {
+    std::vector<std::vector<Vertex>> assembledVertexArray;
+    for (int i = 0; i < transformedVertexArray.size(); i += 3) {
+        std::vector<Vertex> triangle;
+        triangle.push_back(transformedVertexArray[i]);
+        triangle.push_back(transformedVertexArray[i + 1]);
+        triangle.push_back(transformedVertexArray[i + 2]);
         assembledVertexArray.push_back(triangle);
     }
     return assembledVertexArray;
 }
 
-std::vector<Fragment> rasterize(const std::vector<std::vector<glm::vec3>>& assembledVertexArray) {
+std::vector<Fragment> rasterize(const std::vector<std::vector<Vertex>>& assembledVertexArray) {
     std::vector<Fragment> fragments;
-    for (const std::vector<glm::vec3>& triangleVertex : assembledVertexArray) {
+    for (const std::vector<Vertex>& triangleVertex : assembledVertexArray) {
         std::vector<Fragment> triangleFragments = triangle(triangleVertex[0], triangleVertex[1], triangleVertex[2]);
         fragments.insert(fragments.end(), triangleFragments.begin(), triangleFragments.end());
     }
     return fragments;
 }
 
-void render(const std::vector<glm::vec3>& vertexArray, const Uniforms& uniforms) {
+void render(const std::vector<Vertex>& vertexArray, const Uniforms& uniforms) {
     // Vertex Shader
-    std::vector<glm::vec3> transformedVertexArray;
-    for (const glm::vec3& vertex : vertexArray) {
+    std::vector<Vertex> transformedVertexArray;
+    for (const Vertex& vertex : vertexArray) {
         transformedVertexArray.push_back(vertexShader(vertex, uniforms));
     }
 
     // Primitive Assembly
-    std::vector<std::vector<glm::vec3>> assembledVertexArray = primitiveAssembly(transformedVertexArray);
+    std::vector<std::vector<Vertex>> assembledVertexArray = primitiveAssembly(transformedVertexArray);
 
     // Rasterization
     std::vector<Fragment> fragments = rasterize(assembledVertexArray);
     
     // Fragment Shader
-    std::vector<Color> colors;
-    for (const Fragment& fragment : fragments) {
+    for (Fragment& fragment : fragments) {
+        fragment = fragmentShader(fragment);
         point(fragment, renderer);
     }
 }
@@ -106,10 +111,12 @@ int main(int argc, char* argv[]) {
     );
 
     std::vector<glm::vec3> modelVertices;
+    std::vector<glm::vec2> modelTextureCoords;
+    std::vector<glm::vec3> modelNormals;
     std::vector<Face> modelFaces;
-    bool success = loadOBJ("../src/lab3.obj", modelVertices, modelFaces);
+    bool success = loadOBJ("../models/spacecraft.obj", modelVertices, modelTextureCoords, modelNormals, modelFaces);
 
-    std::vector<glm::vec3> vertexArray = setupVertexArray(modelVertices, modelFaces);
+    std::vector<Vertex> vertexArray = setupVertexArray(modelVertices, modelTextureCoords, modelNormals, modelFaces);
 
     Camera camera {
         glm::vec3(0.0f, 0.0f, 3.0f),
@@ -127,7 +134,12 @@ int main(int argc, char* argv[]) {
     bool running = true;
     SDL_Event event;
 
+    int rotation = 0;
+
     while (running) {
+        clearZBuffer();
+        rotation += 1;
+        uniforms.model = createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, rotation, 0.0f), glm::vec3(1.0f));
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 running = false;
