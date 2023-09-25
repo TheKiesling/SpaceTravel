@@ -1,4 +1,7 @@
 # 3D Rendering Project (SR-02): Flat Shading
+![image](https://github.com/TheKiesling/CG-Project-SpaceTravel/assets/84196494/e61a2fe9-50d9-4680-9a72-73d5f8f70aab)
+
+![image](https://github.com/TheKiesling/CG-Project-SpaceTravel/assets/84196494/3ae14b02-20ca-4054-978e-a130be1ee983)
 
 
 
