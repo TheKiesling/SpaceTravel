@@ -11,14 +11,17 @@
 #include "point.h"
 #include "fragment.h"
 
-/**
-* ? FragColor
-* ? cambio en point
-* ? vertexBufferObject
-*/
-
 SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
+
+enum class Model {
+    Earth,
+    Moon,
+    Sun, 
+    Venus,
+    Saturn,
+    Ring
+};
 
 glm::mat4 createModelMatrix(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& scale) {
     glm::mat4 modelMatrix(1.0f);
@@ -37,7 +40,7 @@ glm::mat4 createViewMatrix(const Camera& camera){
 }
 
 glm::mat4 createProjectionMatrix(){
-    float fov = 90.0f;
+    float fov = 45.0f;
     float aspectRatio = (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT;
     float near = 0.1f;
     float far = 100.0f;
@@ -79,7 +82,7 @@ std::vector<Fragment> rasterize(const std::vector<std::vector<Vertex>>& assemble
     return fragments;
 }
 
-void render(const std::vector<Vertex>& vertexArray, const Uniforms& uniforms) {
+void render(const std::vector<Vertex>& vertexArray, const Uniforms& uniforms, const Model& planet) {
     // Vertex Shader
     std::vector<Vertex> transformedVertexArray;
     for (const Vertex& vertex : vertexArray) {
@@ -94,7 +97,29 @@ void render(const std::vector<Vertex>& vertexArray, const Uniforms& uniforms) {
     
     // Fragment Shader
     for (Fragment& fragment : fragments) {
-        fragment = fragmentShader(fragment);
+        switch (planet) {
+            case Model::Earth:
+                fragment = earth(fragment);
+                break;
+            case Model::Moon:
+                fragment = moon(fragment);
+                break;
+            case Model::Sun:
+                fragment = sun(fragment);
+                break;
+            case Model::Venus:
+                fragment = venus(fragment);
+                break;
+            case Model::Saturn:
+                fragment = saturn(fragment);
+                break;
+            case Model::Ring:
+                fragment = ring(fragment);
+                break;
+            default:
+                fragment = fragmentShader(fragment);
+                break;
+        }
         point(fragment, renderer);
     }
 }
@@ -110,13 +135,15 @@ int main(int argc, char* argv[]) {
         SDL_RENDERER_ACCELERATED
     );
 
-    std::vector<glm::vec3> modelVertices;
-    std::vector<glm::vec2> modelTextureCoords;
-    std::vector<glm::vec3> modelNormals;
-    std::vector<Face> modelFaces;
-    bool success = loadOBJ("../models/spacecraft.obj", modelVertices, modelTextureCoords, modelNormals, modelFaces);
+    std::vector<glm::vec3> modelVertices, modelVerticesCircle;
+    std::vector<glm::vec2> modelTextureCoords, modelTextureCoordsCircle;
+    std::vector<glm::vec3> modelNormals, modelNormalsCircle;
+    std::vector<Face> modelFaces, modelFacesCircle;
+    bool successSphere = loadOBJ("../models/sphere.obj", modelVertices, modelTextureCoords, modelNormals, modelFaces);
+    bool succesCircle = loadOBJ("../models/circle.obj", modelVerticesCircle, modelTextureCoordsCircle, modelNormalsCircle, modelFacesCircle);
 
-    std::vector<Vertex> vertexArray = setupVertexArray(modelVertices, modelTextureCoords, modelNormals, modelFaces);
+    std::vector<Vertex> vertexArraySphere = setupVertexArray(modelVertices, modelTextureCoords, modelNormals, modelFaces);
+    std::vector<Vertex> vertexArrayCircle = setupVertexArray(modelVerticesCircle, modelTextureCoordsCircle, modelNormalsCircle, modelFacesCircle);
 
     Camera camera {
         glm::vec3(0.0f, 0.0f, 3.0f),
@@ -124,7 +151,21 @@ int main(int argc, char* argv[]) {
         glm::vec3(0.0f, 1.0f, 0.0f)
     };
 
-    Uniforms uniforms{
+    Uniforms uniformsPlanet{
+        createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(1.0f)),
+        createViewMatrix(camera),
+        createProjectionMatrix(),
+        createViewportMatrix()
+    };
+
+    Uniforms uniformsMoon{
+        createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.5f)),
+        createViewMatrix(camera),
+        createProjectionMatrix(),
+        createViewportMatrix()
+    };
+
+    Uniforms uniformsRing{
         createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(1.0f)),
         createViewMatrix(camera),
         createProjectionMatrix(),
@@ -139,7 +180,10 @@ int main(int argc, char* argv[]) {
     while (running) {
         clearZBuffer();
         rotation += 1;
-        uniforms.model = createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, rotation, 0.0f), glm::vec3(1.0f));
+        uniformsPlanet.model = createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, rotation, 0.0f), glm::vec3(1.0f));
+        uniformsMoon.model = createModelMatrix(glm::vec4(3.0f, 0.0f, 0.0f, 0.0f) * uniformsMoon.model, glm::vec3(0.0f, rotation * 2, 0.0f), glm::vec3(0.3f));
+        uniformsRing.model = createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, rotation, 0.0f), glm::vec3(0.5f));
+
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 running = false;
@@ -150,7 +194,12 @@ int main(int argc, char* argv[]) {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
 
-        render(vertexArray, uniforms);
+        //render(vertexArraySphere, uniformsPlanet, Model::Earth);
+        //render(vertexArraySphere, uniformsMoon, Model::Moon);
+        //render(vertexArraySphere, uniformsPlanet, Model::Venus);
+        //render(vertexArraySphere, uniformsPlanet, Model::Saturn);
+        //render(vertexArrayCircle, uniformsRing, Model::Ring);
+        //render(vertexArraySphere, uniformsPlanet, Model::Sun);
 
         // Actualizar la ventana
         SDL_RenderPresent(renderer);

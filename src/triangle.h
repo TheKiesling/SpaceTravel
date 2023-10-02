@@ -64,7 +64,9 @@ std::vector<Fragment> triangle(const Vertex& a, const Vertex& b, const Vertex& c
 
             Color color = Color{205, 205, 205};
 
-            fragments.push_back(Fragment{glm::vec3(x, y, z), color, z, intensity});
+            glm::vec3 original = a.original * w + b.original * v + c.original * u;
+
+            fragments.push_back(Fragment{glm::vec3(x, y, z), color, z, intensity, original});
         }
     }
     return fragments;

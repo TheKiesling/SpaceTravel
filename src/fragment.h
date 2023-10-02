@@ -3,10 +3,9 @@
 #include "color.h"
 
 struct Fragment {
-
     glm::vec2 position; 
     Color color;
     float z;  
     float intensity;
-
+    glm::vec3 original;
 };
