@@ -7,10 +7,12 @@
 #include "FastNoise.h"
 
 Vertex vertexShader(const Vertex& vertex, const Uniforms& uniforms) {
+    glm::mat4 MVP = uniforms.projection * uniforms.view * uniforms.model;
+    glm::vec4 relativeVertex = MVP * glm::vec4(vertex.position, 1.0f);
     glm::vec4 transformedVertex = uniforms.viewport * uniforms.projection * uniforms.view * uniforms.model * glm::vec4(vertex.position, 1.0f);
     glm::vec3 screenVertex = transformedVertex/transformedVertex.w;
     glm::vec3 normal = glm::normalize(glm::mat3(uniforms.model) * vertex.normal);
-    return Vertex{screenVertex, vertex.color, normal, vertex.textureCoord, vertex.position};
+    return Vertex{screenVertex, vertex.color, normal, vertex.textureCoord, vertex.position, relativeVertex.w > 0.0f};
 }
 
 Fragment fragmentShader(Fragment& fragment) {
@@ -29,15 +31,15 @@ Fragment sun(Fragment& fragment){
     float noise = glm::fract(sin(glm::dot(fragment.position, glm::vec2(12.9898, 78.233))) * 43758.5453) * 0.5f + 0.5f;
 
     float distanceFromCenter = glm::length(fragment.original);
-    red *= 0.5f - distanceFromCenter;
+    red *= 0.4f - distanceFromCenter;
     rose *= 0.6f - distanceFromCenter;
-    pink *= 0.2f - distanceFromCenter;
+    pink *= 0.25f - distanceFromCenter;
 
     glm::vec3 tmpColor = (red + rose + pink) * glm::vec3(0.4f, 0.1f, 0.0f);
 
     color = Color(tmpColor.r * noise, tmpColor.g * noise, tmpColor.b * noise);
 
-    float glow = 1.0f + 1.1f * sin(0.9f);
+    float glow = 1.0f + 1.0f * sin(1.0f);
     fragment.color = color * fragment.intensity * glow;
     return fragment;
 }
@@ -63,8 +65,8 @@ Fragment ring(Fragment& fragment){
 
     glm::vec3 almond = glm::vec3(237.0f, 219.0f, 200.0f);
 
-    float stripePattern = glm::abs(glm::cos(fragment.original.y * 40.0f)) * 17.0f;
-    float secondStripePattern = glm::abs(glm::cos(fragment.original.y * 25.0f)) * 25.0f;
+    float stripePattern = glm::abs(glm::cos(fragment.original.z * 40.0f)) * 17.0f;
+    float secondStripePattern = glm::abs(glm::cos(fragment.original.x * 25.0f)) * 25.0f;
 
     glm::vec3 final = almond + stripePattern - secondStripePattern;
 

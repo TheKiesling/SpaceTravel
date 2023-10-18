@@ -8,4 +8,5 @@ struct Vertex {
     glm::vec3 normal;
     glm::vec2 textureCoord;
     glm::vec3 original;
+    bool renderize;
 };

@@ -10,6 +10,8 @@
 #include "camera.h"
 #include "point.h"
 #include "fragment.h"
+#include <omp.h>
+#include "FastNoise.h"
 
 SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
@@ -22,6 +24,27 @@ enum class Model {
     Saturn,
     Ring
 };
+
+void clear(SDL_Renderer* renderer) {
+    FastNoiseLite noise;
+    noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);  // Establece el color de fondo a negro
+    SDL_RenderClear(renderer);
+
+    for (int y = 0; y < WINDOW_HEIGHT; y++) {
+        for (int x = 0; x < WINDOW_WIDTH; x++) {
+            float noiseValue = noise.GetNoise(x * 10.0f, y * 10.0f);  // Ajusta la escala del ruido
+
+            // Si el ruido supera un cierto umbral, dibujamos una estrella
+            if (noiseValue > 0.9f) {
+                SDL_SetRenderDrawColor(renderer, 225, 225, 225, 225);
+                SDL_RenderDrawPoint(renderer, x, y);
+            }
+        }
+    }
+}
+
 
 glm::mat4 createModelMatrix(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& scale) {
     glm::mat4 modelMatrix(1.0f);
@@ -75,6 +98,7 @@ std::vector<std::vector<Vertex>> primitiveAssembly(const std::vector<Vertex>& tr
 
 std::vector<Fragment> rasterize(const std::vector<std::vector<Vertex>>& assembledVertexArray) {
     std::vector<Fragment> fragments;
+    #pragma omp parallel for 
     for (const std::vector<Vertex>& triangleVertex : assembledVertexArray) {
         std::vector<Fragment> triangleFragments = triangle(triangleVertex[0], triangleVertex[1], triangleVertex[2]);
         fragments.insert(fragments.end(), triangleFragments.begin(), triangleFragments.end());
@@ -85,6 +109,7 @@ std::vector<Fragment> rasterize(const std::vector<std::vector<Vertex>>& assemble
 void render(const std::vector<Vertex>& vertexArray, const Uniforms& uniforms, const Model& planet) {
     // Vertex Shader
     std::vector<Vertex> transformedVertexArray;
+    #pragma omp parallel for 
     for (const Vertex& vertex : vertexArray) {
         transformedVertexArray.push_back(vertexShader(vertex, uniforms));
     }
@@ -96,6 +121,7 @@ void render(const std::vector<Vertex>& vertexArray, const Uniforms& uniforms, co
     std::vector<Fragment> fragments = rasterize(assembledVertexArray);
     
     // Fragment Shader
+    #pragma omp parallel for 
     for (Fragment& fragment : fragments) {
         switch (planet) {
             case Model::Earth:
@@ -172,6 +198,14 @@ int main(int argc, char* argv[]) {
         createViewportMatrix()
     };
 
+    Uniforms uniformsSpacecraft{
+        createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.5f)),
+        createViewMatrix(camera),
+        createProjectionMatrix(),
+        createViewportMatrix()
+    };
+    
+
     bool running = true;
     SDL_Event event;
 
@@ -191,11 +225,10 @@ int main(int argc, char* argv[]) {
         }
 
         // Limpiar la ventana
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
+        clear(renderer);
 
-        //render(vertexArraySphere, uniformsPlanet, Model::Earth);
-        //render(vertexArraySphere, uniformsMoon, Model::Moon);
+        render(vertexArraySphere, uniformsPlanet, Model::Earth);
+        render(vertexArraySphere, uniformsMoon, Model::Moon);
         //render(vertexArraySphere, uniformsPlanet, Model::Venus);
         //render(vertexArraySphere, uniformsPlanet, Model::Saturn);
         //render(vertexArrayCircle, uniformsRing, Model::Ring);
