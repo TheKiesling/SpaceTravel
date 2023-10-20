@@ -22,21 +22,21 @@ enum class Model {
     Sun, 
     Venus,
     Saturn,
-    Ring
+    Ring,
+    Spacecraft
 };
 
-void clear(SDL_Renderer* renderer) {
+void clear(SDL_Renderer* renderer, const Camera& camera) {
     FastNoiseLite noise;
-    noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
 
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);  // Establece el color de fondo a negro
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);  
     SDL_RenderClear(renderer);
 
     for (int y = 0; y < WINDOW_HEIGHT; y++) {
         for (int x = 0; x < WINDOW_WIDTH; x++) {
-            float noiseValue = noise.GetNoise(x * 10.0f, y * 10.0f);  // Ajusta la escala del ruido
+            float noiseValue = noise.GetNoise((x + camera.center.x) * 30.0f, (y + camera.center.y) * 30.0f);
 
-            // Si el ruido supera un cierto umbral, dibujamos una estrella
             if (noiseValue > 0.9f) {
                 SDL_SetRenderDrawColor(renderer, 225, 225, 225, 225);
                 SDL_RenderDrawPoint(renderer, x, y);
@@ -44,7 +44,6 @@ void clear(SDL_Renderer* renderer) {
         }
     }
 }
-
 
 glm::mat4 createModelMatrix(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& scale) {
     glm::mat4 modelMatrix(1.0f);
@@ -161,15 +160,17 @@ int main(int argc, char* argv[]) {
         SDL_RENDERER_ACCELERATED
     );
 
-    std::vector<glm::vec3> modelVertices, modelVerticesCircle;
-    std::vector<glm::vec2> modelTextureCoords, modelTextureCoordsCircle;
-    std::vector<glm::vec3> modelNormals, modelNormalsCircle;
-    std::vector<Face> modelFaces, modelFacesCircle;
+    std::vector<glm::vec3> modelVertices, modelVerticesCircle, modelVerticesSpacecraft;
+    std::vector<glm::vec2> modelTextureCoords, modelTextureCoordsCircle, modelTextureCoordsSpacecraft;
+    std::vector<glm::vec3> modelNormals, modelNormalsCircle, modelNormalsSpacecraft;
+    std::vector<Face> modelFaces, modelFacesCircle, modelFacesSpacecraft;
     bool successSphere = loadOBJ("../models/sphere.obj", modelVertices, modelTextureCoords, modelNormals, modelFaces);
     bool succesCircle = loadOBJ("../models/circle.obj", modelVerticesCircle, modelTextureCoordsCircle, modelNormalsCircle, modelFacesCircle);
+    bool succesSpacecraft = loadOBJ("../models/lab3.obj", modelVerticesSpacecraft, modelTextureCoordsSpacecraft, modelNormalsSpacecraft, modelFacesSpacecraft);
 
     std::vector<Vertex> vertexArraySphere = setupVertexArray(modelVertices, modelTextureCoords, modelNormals, modelFaces);
     std::vector<Vertex> vertexArrayCircle = setupVertexArray(modelVerticesCircle, modelTextureCoordsCircle, modelNormalsCircle, modelFacesCircle);
+    std::vector<Vertex> vertexArraySpacecraft = setupVertexArray(modelVerticesSpacecraft, modelTextureCoordsSpacecraft, modelNormalsSpacecraft, modelFacesSpacecraft);
 
     Camera camera {
         glm::vec3(0.0f, 0.0f, 3.0f),
@@ -185,7 +186,7 @@ int main(int argc, char* argv[]) {
     };
 
     Uniforms uniformsMoon{
-        createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.5f)),
+        createModelMatrix(glm::vec3(3.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.3f)),
         createViewMatrix(camera),
         createProjectionMatrix(),
         createViewportMatrix()
@@ -199,7 +200,7 @@ int main(int argc, char* argv[]) {
     };
 
     Uniforms uniformsSpacecraft{
-        createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.5f)),
+        createModelMatrix(glm::vec3(10.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.1f)),
         createViewMatrix(camera),
         createProjectionMatrix(),
         createViewportMatrix()
@@ -211,28 +212,69 @@ int main(int argc, char* argv[]) {
 
     int rotation = 0;
 
+    glm::vec3 spacecraftPosition = glm::vec3(0.0f, 0.0f, 3.0f);
+    float spacecraftSpeed = 0.1f; 
+    
+    float zDistance = -5.0f;
+
     while (running) {
         clearZBuffer();
         rotation += 1;
+
+        glm::vec3 cameraOffset = glm::vec3(0.0f, 0.0f, zDistance); 
+
+        glm::vec3 cameraTarget = spacecraftPosition + glm::vec3(0.0f, 0.0f, -1.0f);
+
         uniformsPlanet.model = createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, rotation, 0.0f), glm::vec3(1.0f));
         uniformsMoon.model = createModelMatrix(glm::vec4(3.0f, 0.0f, 0.0f, 0.0f) * uniformsMoon.model, glm::vec3(0.0f, rotation * 2, 0.0f), glm::vec3(0.3f));
         uniformsRing.model = createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, rotation, 0.0f), glm::vec3(0.5f));
+    
+        const Uint8 *keys = SDL_GetKeyboardState(NULL);
 
+        if (keys[SDL_SCANCODE_LEFT]) {
+            spacecraftPosition.x -= spacecraftSpeed;
+        }
+        if (keys[SDL_SCANCODE_RIGHT]) {
+            spacecraftPosition.x += spacecraftSpeed;
+        }
+        if (keys[SDL_SCANCODE_UP]) {
+            spacecraftPosition.y += spacecraftSpeed;
+        }
+        if (keys[SDL_SCANCODE_DOWN]) {
+            spacecraftPosition.y -= spacecraftSpeed;
+        }
+        if (keys[SDL_SCANCODE_W]) {
+            zDistance -= spacecraftSpeed;
+        }
+        if (keys[SDL_SCANCODE_S]) {
+            zDistance += spacecraftSpeed;
+        }
+
+        uniformsSpacecraft.model = createModelMatrix(spacecraftPosition, glm::vec3(0.0f), glm::vec3(0.5f));
+        glm::vec3 cameraPosition = spacecraftPosition + cameraOffset;
+
+        camera = {
+            cameraPosition,
+            cameraTarget,
+            glm::vec3(0.0f, 1.0f, 0.0f)
+        };
+
+        uniformsSpacecraft.view = createViewMatrix(camera);
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 running = false;
             }
         }
 
-        // Limpiar la ventana
-        clear(renderer);
+        clear(renderer, camera);
 
-        render(vertexArraySphere, uniformsPlanet, Model::Earth);
-        render(vertexArraySphere, uniformsMoon, Model::Moon);
+        //render(vertexArraySphere, uniformsPlanet, Model::Earth);
+        //render(vertexArraySphere, uniformsMoon, Model::Moon);
         //render(vertexArraySphere, uniformsPlanet, Model::Venus);
         //render(vertexArraySphere, uniformsPlanet, Model::Saturn);
         //render(vertexArrayCircle, uniformsRing, Model::Ring);
         //render(vertexArraySphere, uniformsPlanet, Model::Sun);
+        render(vertexArraySpacecraft, uniformsSpacecraft, Model::Spacecraft);
 
         // Actualizar la ventana
         SDL_RenderPresent(renderer);

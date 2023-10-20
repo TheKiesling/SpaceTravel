@@ -65,8 +65,8 @@ Fragment ring(Fragment& fragment){
 
     glm::vec3 almond = glm::vec3(237.0f, 219.0f, 200.0f);
 
-    float stripePattern = glm::abs(glm::cos(fragment.original.z * 40.0f)) * 17.0f;
-    float secondStripePattern = glm::abs(glm::cos(fragment.original.x * 25.0f)) * 25.0f;
+    float stripePattern = glm::abs(glm::cos(fragment.original.y * 40.0f)) * 17.0f;
+    float secondStripePattern = glm::abs(glm::cos(fragment.original.y * 25.0f)) * 25.0f;
 
     glm::vec3 final = almond + stripePattern - secondStripePattern;
 
