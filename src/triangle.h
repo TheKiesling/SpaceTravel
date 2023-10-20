@@ -28,9 +28,6 @@ glm::vec3 barycentricCoordinates(const glm::vec3& P, const glm::vec3& A, const g
 std::vector<Fragment> triangle(const Vertex& a, const Vertex& b, const Vertex& c) {
     std::vector<Fragment> fragments;
 
-    if (!a.renderize && !b.renderize && !c.renderize)
-        return fragments;
-
     glm::vec3 A = a.position;
     glm::vec3 B = b.position;
     glm::vec3 C = c.position;

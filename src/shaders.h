@@ -7,12 +7,10 @@
 #include "FastNoise.h"
 
 Vertex vertexShader(const Vertex& vertex, const Uniforms& uniforms) {
-    glm::mat4 MVP = uniforms.projection * uniforms.view * uniforms.model;
-    glm::vec4 relativeVertex = MVP * glm::vec4(vertex.position, 1.0f);
     glm::vec4 transformedVertex = uniforms.viewport * uniforms.projection * uniforms.view * uniforms.model * glm::vec4(vertex.position, 1.0f);
     glm::vec3 screenVertex = transformedVertex/transformedVertex.w;
     glm::vec3 normal = glm::normalize(glm::mat3(uniforms.model) * vertex.normal);
-    return Vertex{screenVertex, vertex.color, normal, vertex.textureCoord, vertex.position, relativeVertex.w > 0.0f};
+    return Vertex{screenVertex, vertex.color, normal, vertex.textureCoord, vertex.position};
 }
 
 Fragment fragmentShader(Fragment& fragment) {

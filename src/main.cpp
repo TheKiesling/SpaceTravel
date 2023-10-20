@@ -12,19 +12,10 @@
 #include "fragment.h"
 #include <omp.h>
 #include "FastNoise.h"
+#include "models.h"
 
 SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
-
-enum class Model {
-    Earth,
-    Moon,
-    Sun, 
-    Venus,
-    Saturn,
-    Ring,
-    Spacecraft
-};
 
 void clear(SDL_Renderer* renderer, const Camera& camera) {
     FastNoiseLite noise;
@@ -74,10 +65,8 @@ glm::mat4 createProjectionMatrix(){
 glm::mat4 createViewportMatrix() {
     glm::mat4 viewport = glm::mat4(1.0f);
 
-    // Scale
     viewport = glm::scale(viewport, glm::vec3(WINDOW_WIDTH / 2.0f, WINDOW_HEIGHT / 2.0f, 0.5f));
 
-    // Translate
     viewport = glm::translate(viewport, glm::vec3(1.0f, 1.0f, 0.5f));
 
     return viewport;
@@ -179,7 +168,7 @@ int main(int argc, char* argv[]) {
     };
 
     Uniforms uniformsPlanet{
-        createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(1.0f)),
+        createModelMatrix(glm::vec3(3.0f, 0.0f, -20.0f), glm::vec3(0.0f), glm::vec3(1.0f)),
         createViewMatrix(camera),
         createProjectionMatrix(),
         createViewportMatrix()
@@ -200,7 +189,7 @@ int main(int argc, char* argv[]) {
     };
 
     Uniforms uniformsSpacecraft{
-        createModelMatrix(glm::vec3(10.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.1f)),
+        createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.1f)),
         createViewMatrix(camera),
         createProjectionMatrix(),
         createViewportMatrix()
@@ -210,25 +199,22 @@ int main(int argc, char* argv[]) {
     bool running = true;
     SDL_Event event;
 
-    int rotation = 0;
+    int Traslation = 0;
+    int Rotation = 0;
 
-    glm::vec3 spacecraftPosition = glm::vec3(0.0f, 0.0f, 3.0f);
-    float spacecraftSpeed = 0.1f; 
-    
-    float zDistance = -5.0f;
+    glm::vec3 spacecraftPosition = glm::vec3(0.0f, 0.0f, 0.0f);
+    float spacecraftSpeed = 1.0f; 
+    glm::vec3 viewSpacecraft = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 cameraOffset = glm::vec3(0.0f, 0.0f, -15.0f); 
+
+    glm::vec3 earthPosition = glm::vec3(0.0f, 0.0f, -20.0f);
 
     while (running) {
         clearZBuffer();
-        rotation += 1;
+        Traslation += 1.0f;
+        Rotation += 1.0f;
 
-        glm::vec3 cameraOffset = glm::vec3(0.0f, 0.0f, zDistance); 
 
-        glm::vec3 cameraTarget = spacecraftPosition + glm::vec3(0.0f, 0.0f, -1.0f);
-
-        uniformsPlanet.model = createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, rotation, 0.0f), glm::vec3(1.0f));
-        uniformsMoon.model = createModelMatrix(glm::vec4(3.0f, 0.0f, 0.0f, 0.0f) * uniformsMoon.model, glm::vec3(0.0f, rotation * 2, 0.0f), glm::vec3(0.3f));
-        uniformsRing.model = createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, rotation, 0.0f), glm::vec3(0.5f));
-    
         const Uint8 *keys = SDL_GetKeyboardState(NULL);
 
         if (keys[SDL_SCANCODE_LEFT]) {
@@ -238,20 +224,19 @@ int main(int argc, char* argv[]) {
             spacecraftPosition.x += spacecraftSpeed;
         }
         if (keys[SDL_SCANCODE_UP]) {
-            spacecraftPosition.y += spacecraftSpeed;
+            if (spacecraftPosition.z - spacecraftSpeed >= -18.0f){
+                spacecraftPosition.z -= spacecraftSpeed;
+            }
         }
         if (keys[SDL_SCANCODE_DOWN]) {
-            spacecraftPosition.y -= spacecraftSpeed;
-        }
-        if (keys[SDL_SCANCODE_W]) {
-            zDistance -= spacecraftSpeed;
-        }
-        if (keys[SDL_SCANCODE_S]) {
-            zDistance += spacecraftSpeed;
+            spacecraftPosition.z += spacecraftSpeed;
         }
 
         uniformsSpacecraft.model = createModelMatrix(spacecraftPosition, glm::vec3(0.0f), glm::vec3(0.5f));
+        uniformsPlanet.model = createModelMatrix(earthPosition, glm::vec3(0.0f, Traslation, 0.0f), glm::vec3(1.0f));
+        uniformsMoon.model = createModelMatrix(glm::vec3(1.0f, 0.0f, -20.0f), glm::vec3(0.0f, Traslation * 2, 0.0f), glm::vec3(0.3f));
         glm::vec3 cameraPosition = spacecraftPosition + cameraOffset;
+        glm::vec3 cameraTarget = spacecraftPosition + viewSpacecraft;
 
         camera = {
             cameraPosition,
@@ -260,6 +245,9 @@ int main(int argc, char* argv[]) {
         };
 
         uniformsSpacecraft.view = createViewMatrix(camera);
+        uniformsPlanet.view = createViewMatrix(camera);
+        uniformsMoon.view = createViewMatrix(camera) ;
+
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 running = false;
@@ -268,13 +256,9 @@ int main(int argc, char* argv[]) {
 
         clear(renderer, camera);
 
-        //render(vertexArraySphere, uniformsPlanet, Model::Earth);
-        //render(vertexArraySphere, uniformsMoon, Model::Moon);
-        //render(vertexArraySphere, uniformsPlanet, Model::Venus);
-        //render(vertexArraySphere, uniformsPlanet, Model::Saturn);
-        //render(vertexArrayCircle, uniformsRing, Model::Ring);
-        //render(vertexArraySphere, uniformsPlanet, Model::Sun);
         render(vertexArraySpacecraft, uniformsSpacecraft, Model::Spacecraft);
+        render(vertexArraySphere, uniformsPlanet, Model::Earth);
+        render(vertexArraySphere, uniformsMoon, Model::Moon);
 
         // Actualizar la ventana
         SDL_RenderPresent(renderer);
