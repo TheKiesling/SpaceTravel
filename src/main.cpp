@@ -24,6 +24,7 @@ void clear(SDL_Renderer* renderer, const Camera& camera) {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);  
     SDL_RenderClear(renderer);
 
+    #pragma omp parallel for 
     for (int y = 0; y < WINDOW_HEIGHT; y++) {
         for (int x = 0; x < WINDOW_WIDTH; x++) {
             float noiseValue = noise.GetNoise((x + camera.center.x) * 30.0f, (y + camera.center.y) * 30.0f);
@@ -74,6 +75,7 @@ glm::mat4 createViewportMatrix() {
 
 std::vector<std::vector<Vertex>> primitiveAssembly(const std::vector<Vertex>& transformedVertexArray) {
     std::vector<std::vector<Vertex>> assembledVertexArray;
+    #pragma omp parallel for 
     for (int i = 0; i < transformedVertexArray.size(); i += 3) {
         std::vector<Vertex> triangle;
         triangle.push_back(transformedVertexArray[i]);
@@ -167,7 +169,7 @@ int main(int argc, char* argv[]) {
         glm::vec3(0.0f, 1.0f, 0.0f)
     };
 
-    Uniforms uniformsPlanet{
+    Uniforms uniformsEarth{
         createModelMatrix(glm::vec3(3.0f, 0.0f, -20.0f), glm::vec3(0.0f), glm::vec3(1.0f)),
         createViewMatrix(camera),
         createProjectionMatrix(),
@@ -175,21 +177,42 @@ int main(int argc, char* argv[]) {
     };
 
     Uniforms uniformsMoon{
-        createModelMatrix(glm::vec3(3.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.3f)),
-        createViewMatrix(camera),
-        createProjectionMatrix(),
-        createViewportMatrix()
-    };
-
-    Uniforms uniformsRing{
-        createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(1.0f)),
+        createModelMatrix(glm::vec3(3.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.4f)),
         createViewMatrix(camera),
         createProjectionMatrix(),
         createViewportMatrix()
     };
 
     Uniforms uniformsSpacecraft{
-        createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.1f)),
+        createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.2f)),
+        createViewMatrix(camera),
+        createProjectionMatrix(),
+        createViewportMatrix()
+    };
+
+    Uniforms uniformsSun{
+        createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(5.0f)),
+        createViewMatrix(camera),
+        createProjectionMatrix(),
+        createViewportMatrix()
+    };
+
+    Uniforms uniformsVenus{
+        createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.8f)),
+        createViewMatrix(camera),
+        createProjectionMatrix(),
+        createViewportMatrix()
+    };
+
+    Uniforms uniformsSaturn{
+        createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(1.4f)),
+        createViewMatrix(camera),
+        createProjectionMatrix(),
+        createViewportMatrix()
+    };
+    
+    Uniforms uniformsRing{
+        createModelMatrix(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.8f)),
         createViewMatrix(camera),
         createProjectionMatrix(),
         createViewportMatrix()
@@ -199,54 +222,122 @@ int main(int argc, char* argv[]) {
     bool running = true;
     SDL_Event event;
 
-    int Traslation = 0;
-    int Rotation = 0;
+    int Translation = 0.0f;
+    int Rotation = 0.0f;
 
-    glm::vec3 spacecraftPosition = glm::vec3(0.0f, 0.0f, 0.0f);
-    float spacecraftSpeed = 1.0f; 
+    glm::vec3 spacecraftPosition = glm::vec3(0.0f, 0.0f, -50.0f);
+    float spacecraftSpeed = 2.0f; 
     glm::vec3 viewSpacecraft = glm::vec3(0.0f, 0.0f, 0.0f);
     glm::vec3 cameraOffset = glm::vec3(0.0f, 0.0f, -15.0f); 
 
     glm::vec3 earthPosition = glm::vec3(0.0f, 0.0f, -20.0f);
+    glm::vec3 moonPosition = glm::vec3(0.0f, 0.0f, -20.0f);
+    glm::vec3 sunPosition = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 venusPosition = glm::vec3(0.0f, 0.0f, -10.0f);
+    glm::vec3 saturnPosition = glm::vec3(0.0f, 0.0f, -30.0f);
+    glm::vec3 ringPosition = glm::vec3(0.0f, 0.0f, -30.0f);
+
+    float moonOrbitSpeed = 1.0f; 
+    float moonDistance = 1.0f; 
+    float moonOrbitAngle = 0.0f;
+
+    Model model = Model::Spacecraft;
 
     while (running) {
         clearZBuffer();
-        Traslation += 1.0f;
+        
+        Translation += 1.0f;
         Rotation += 1.0f;
-
 
         const Uint8 *keys = SDL_GetKeyboardState(NULL);
 
         if (keys[SDL_SCANCODE_LEFT]) {
-            spacecraftPosition.x -= spacecraftSpeed;
-        }
-        if (keys[SDL_SCANCODE_RIGHT]) {
+            model = Model::Spacecraft;
             spacecraftPosition.x += spacecraftSpeed;
         }
-        if (keys[SDL_SCANCODE_UP]) {
-            if (spacecraftPosition.z - spacecraftSpeed >= -18.0f){
-                spacecraftPosition.z -= spacecraftSpeed;
-            }
+        if (keys[SDL_SCANCODE_RIGHT]) {
+            model = Model::Spacecraft;
+            spacecraftPosition.x -= spacecraftSpeed;
         }
-        if (keys[SDL_SCANCODE_DOWN]) {
+        if (keys[SDL_SCANCODE_UP]) {
+            model = Model::Spacecraft;
             spacecraftPosition.z += spacecraftSpeed;
         }
+        if (keys[SDL_SCANCODE_DOWN]) {
+            model = Model::Spacecraft;
+            spacecraftPosition.z -= spacecraftSpeed;
+        }
+        if (keys[SDL_SCANCODE_1]) {
+            model = Model::Earth;
+        }
+        if (keys[SDL_SCANCODE_2]) {
+            model = Model::Venus;
+        }
+        if (keys[SDL_SCANCODE_3]) {
+            model = Model::Saturn;
+        }
 
-        uniformsSpacecraft.model = createModelMatrix(spacecraftPosition, glm::vec3(0.0f), glm::vec3(0.5f));
-        uniformsPlanet.model = createModelMatrix(earthPosition, glm::vec3(0.0f, Traslation, 0.0f), glm::vec3(1.0f));
-        uniformsMoon.model = createModelMatrix(glm::vec3(1.0f, 0.0f, -20.0f), glm::vec3(0.0f, Traslation * 2, 0.0f), glm::vec3(0.3f));
-        glm::vec3 cameraPosition = spacecraftPosition + cameraOffset;
-        glm::vec3 cameraTarget = spacecraftPosition + viewSpacecraft;
+        switch (model){
+            case Model::Earth:
+                spacecraftPosition.x = earthPosition.x;
+                spacecraftPosition.y = earthPosition.y;
+                spacecraftPosition.z = earthPosition.z - 5.0f;
+                break;
+            case Model::Venus:
+                spacecraftPosition.x = venusPosition.x;
+                spacecraftPosition.y = venusPosition.y;
+                spacecraftPosition.z = venusPosition.z - 5.0f;
+                break;
+            case Model::Saturn:
+                spacecraftPosition.x = saturnPosition.x;
+                spacecraftPosition.y = saturnPosition.y;
+                spacecraftPosition.z = saturnPosition.z - 5.0f;
+                break;
+            default:
+                break;
+        }
 
-        camera = {
-            cameraPosition,
-            cameraTarget,
-            glm::vec3(0.0f, 1.0f, 0.0f)
-        };
+        moonOrbitAngle += moonOrbitSpeed;
+
+        uniformsSpacecraft.model = createModelMatrix(spacecraftPosition, glm::vec3(0.0f), glm::vec3(0.1f));
+
+        uniformsSun.model = createModelMatrix(sunPosition, glm::vec3(0.0f, Rotation, 0.0f), glm::vec3(10.0f));
+
+        earthPosition.x = sunPosition.x + 200.0f * glm::cos(glm::radians(moonOrbitAngle));
+        earthPosition.z = sunPosition.z + 200.0f * glm::sin(glm::radians(moonOrbitAngle));
+
+        uniformsEarth.model = createModelMatrix(earthPosition, glm::vec3(0.0f, Rotation, 0.0f), glm::vec3(1.0f));
+
+        moonPosition.x = earthPosition.x + moonDistance * glm::cos(glm::radians(moonOrbitAngle * 4));
+        moonPosition.z = earthPosition.z + moonDistance * glm::sin(glm::radians(moonOrbitAngle * 4));
+
+        uniformsMoon.model = createModelMatrix(moonPosition, glm::vec3(0.0f, Rotation * 2, 0.0f), glm::vec3(0.4f));
+
+        venusPosition.x = sunPosition.x + 100.0f * glm::cos(glm::radians(moonOrbitAngle * 2));
+        venusPosition.z = sunPosition.z + 100.0f * glm::sin(glm::radians(moonOrbitAngle * 2));
+
+        uniformsVenus.model = createModelMatrix(venusPosition, glm::vec3(0.0f, Rotation, 0.0f), glm::vec3(0.8f));
+
+        saturnPosition.x = sunPosition.x + 400.0f * glm::cos(glm::radians(moonOrbitAngle * 0.5));
+        saturnPosition.z = sunPosition.z + 400.0f * glm::sin(glm::radians(moonOrbitAngle * 0.5));
+
+        uniformsSaturn.model = createModelMatrix(saturnPosition, glm::vec3(0.0f, Rotation, 0.0f), glm::vec3(1.4f));
+
+        ringPosition.x = saturnPosition.x;
+        ringPosition.z = saturnPosition.z;
+
+        uniformsRing.model = createModelMatrix(ringPosition, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.8f));
+
+        camera.position = spacecraftPosition + cameraOffset;
+        camera.center = spacecraftPosition;
 
         uniformsSpacecraft.view = createViewMatrix(camera);
-        uniformsPlanet.view = createViewMatrix(camera);
-        uniformsMoon.view = createViewMatrix(camera) ;
+        uniformsEarth.view = createViewMatrix(camera);
+        uniformsMoon.view = createViewMatrix(camera);
+        uniformsSun.view = createViewMatrix(camera);
+        uniformsVenus.view = createViewMatrix(camera);
+        uniformsSaturn.view = createViewMatrix(camera);
+        uniformsRing.view = createViewMatrix(camera);
 
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
@@ -257,10 +348,13 @@ int main(int argc, char* argv[]) {
         clear(renderer, camera);
 
         render(vertexArraySpacecraft, uniformsSpacecraft, Model::Spacecraft);
-        render(vertexArraySphere, uniformsPlanet, Model::Earth);
+        render(vertexArraySphere, uniformsEarth, Model::Earth);
         render(vertexArraySphere, uniformsMoon, Model::Moon);
+        render(vertexArraySphere, uniformsSun, Model::Sun);
+        render(vertexArraySphere, uniformsVenus, Model::Venus);
+        render(vertexArraySphere, uniformsSaturn, Model::Saturn);
+        render(vertexArrayCircle, uniformsRing, Model::Ring);
 
-        // Actualizar la ventana
         SDL_RenderPresent(renderer);
     }
 
