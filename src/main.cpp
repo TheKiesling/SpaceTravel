@@ -37,6 +37,53 @@ void clear(SDL_Renderer* renderer, const Camera& camera) {
     }
 }
 
+void movingToAPlanet(SDL_Renderer* renderer, const Camera& camera, Uniforms& spacecraftUniforms) {
+    FastNoiseLite noise;
+    noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+
+    Uint32 startTime = SDL_GetTicks(); 
+    const Uint32 animationDuration = 750; 
+
+    while (true) {
+        Uint32 currentTime = SDL_GetTicks();  
+
+        Uint32 elapsedTime = currentTime - startTime;
+
+        if (elapsedTime >= animationDuration) {
+            break; 
+        }
+
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
+
+        for (int y = 0; y < WINDOW_HEIGHT; y += 2) {
+            for (int x = 0; x < WINDOW_WIDTH; x += 2) {
+                float noiseValue = noise.GetNoise((x + camera.center.x) * 30.0f, (y + camera.center.y) * 30.0f);
+
+                if (noiseValue > 0.75f) {
+                    SDL_SetRenderDrawColor(renderer, 225, 225, 225, 225);
+
+                    if (x < WINDOW_WIDTH / 2 && y < WINDOW_HEIGHT / 2)
+                    SDL_RenderDrawLine(renderer, x - elapsedTime / 100, y - elapsedTime / 100, x, y );
+
+                    else if (x > WINDOW_WIDTH / 2 && y < WINDOW_HEIGHT / 2)
+                    SDL_RenderDrawLine(renderer, x + elapsedTime / 100, y - elapsedTime / 100, x, y);
+
+                    else if (x < WINDOW_WIDTH / 2 && y > WINDOW_HEIGHT / 2)
+                    SDL_RenderDrawLine(renderer, x - elapsedTime / 100, y + elapsedTime / 100, x, y);
+
+                    else if (x > WINDOW_WIDTH / 2 && y > WINDOW_HEIGHT / 2)
+                    SDL_RenderDrawLine(renderer, x + elapsedTime / 100, y + elapsedTime / 100, x, y);
+                }
+            }
+        }
+
+        SDL_RenderPresent(renderer);
+
+        SDL_Delay(10);  
+    }
+}
+
 glm::mat4 createModelMatrix(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& scale) {
     glm::mat4 modelMatrix(1.0f);
     modelMatrix = glm::translate(modelMatrix, position);
@@ -253,28 +300,42 @@ int main(int argc, char* argv[]) {
 
         if (keys[SDL_SCANCODE_LEFT]) {
             model = Model::Spacecraft;
-            spacecraftPosition.x += spacecraftSpeed;
+                spacecraftPosition.x += spacecraftSpeed;
         }
         if (keys[SDL_SCANCODE_RIGHT]) {
             model = Model::Spacecraft;
-            spacecraftPosition.x -= spacecraftSpeed;
+                spacecraftPosition.x -= spacecraftSpeed;
         }
         if (keys[SDL_SCANCODE_UP]) {
             model = Model::Spacecraft;
-            spacecraftPosition.z += spacecraftSpeed;
+            if (sunPosition.z > spacecraftPosition.z + 10.0f) {
+                spacecraftPosition.z += spacecraftSpeed;
+            }
         }
         if (keys[SDL_SCANCODE_DOWN]) {
             model = Model::Spacecraft;
-            spacecraftPosition.z -= spacecraftSpeed;
+            if (sunPosition.z > spacecraftPosition.z - 10.0f) {
+                spacecraftPosition.z -= spacecraftSpeed;
+            }
         }
         if (keys[SDL_SCANCODE_1]) {
             model = Model::Earth;
+            movingToAPlanet(renderer, camera, uniformsSpacecraft);
         }
         if (keys[SDL_SCANCODE_2]) {
             model = Model::Venus;
+            movingToAPlanet(renderer, camera, uniformsSpacecraft);
         }
         if (keys[SDL_SCANCODE_3]) {
             model = Model::Saturn;
+            movingToAPlanet(renderer, camera, uniformsSpacecraft);
+        }
+        if (keys[SDL_SCANCODE_4]) {
+            model = Model::Spacecraft;
+            spacecraftPosition.x = 0.0f;
+            spacecraftPosition.y = 0.0f;
+            spacecraftPosition.z = -50.0f;
+            movingToAPlanet(renderer, camera, uniformsSpacecraft);
         }
 
         switch (model){
